@@ -5,6 +5,7 @@ FROM centos:7
 
 
 RUN yum -y groupinstall "Development Tools"
+RUN yum -y install python3
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH=/root/.cargo/bin:$PATH
 
