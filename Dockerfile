@@ -16,7 +16,7 @@ RUN curl -sO https://www.python.org/ftp/python/3.8.12/Python-3.8.12.tgz \
     && rm -rf Python-3.8.12.tgz Python-3.8.12
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH=/root/.cargo/bin:$PATH
-ENV RUSTFLAGS=-C relocation-model=pic
+#ENV RUSTFLAGS=-C relocation-model=pic
 
 #RUN cargo new hello --bin
 #RUN cargo build --release
