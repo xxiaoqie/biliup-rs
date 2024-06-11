@@ -45,7 +45,7 @@ jobs:
         run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app biliup cargo build --release
 
       - name: test
-        run: ls -al
+        run: ls -al target
 
 #      - name: Install ${{ matrix.rust }} toolchain
 #        uses: actions-rs/toolchain@v1
@@ -90,7 +90,8 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-2019" ]; then
             cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "dist/"
           else
-            cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
+            #cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
+            cp "target/release/$BIN_NAME" "dist/"
           fi
 
       - uses: actions/upload-artifact@v2.2.4
