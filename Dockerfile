@@ -3,6 +3,9 @@ FROM centos:7
 #WORKDIR /usr/src/app
 #COPY ./ .
 
+RUN cat /etc/yum.repos.d/*
+RUN sed -i 's/^mirrorlist/#mirrorlist/' /etc/yum.repos.d/CentOS-Base.repo \
+    && sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|' /etc/yum.repos.d/CentOS-Base.repo
 
 RUN yum -y groupinstall "Development Tools"
 RUN yum -y install zlib-devel
