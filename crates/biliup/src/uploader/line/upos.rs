@@ -176,7 +176,7 @@ impl Upos {
             return Err(Kind::Custom(res.to_string()));
         }
         Ok(Video {
-            title: None,
+            title: "None",
             filename: Path::new(&self.bucket.upos_uri)
                 .file_stem()
                 .unwrap()
