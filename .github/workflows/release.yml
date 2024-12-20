@@ -44,7 +44,7 @@ jobs:
         run: pwd && ( tree || ls -al )
 
       - name: Run container
-        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app accuminium/rust-centos:7.8.2003_stable cargo build --release
+        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos build --release
 
       - name: test
         run: ls -al target
@@ -119,7 +119,7 @@ jobs:
 
       - name: Calculate tag name
         run: |
-          name=dev
+          name=$(date +'%Y%m%d')
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             name=${GITHUB_REF:10}
           fi
