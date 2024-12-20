@@ -44,7 +44,7 @@ jobs:
         run: pwd && ( tree || ls -al )
 
       - name: Run container
-        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos build --release
+        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos cargo build --release
 
       - name: test
         run: ls -al target
