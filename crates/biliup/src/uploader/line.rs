@@ -1,3 +1,4 @@
+use regex::Regex;
 use crate::error::Result;
 use crate::uploader::{Uploader, VideoFile, VideoStream};
 use futures::{Stream, TryStreamExt};
