@@ -38,11 +38,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Build Docker image
-        run: docker build -t biliup .
+          #- name: Build Docker image
+          #  run: docker build -t biliup .
 
       - name: Run container
-        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app biliup cargo build --release
+        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos cargo build --release
 
       - name: test
         run: ls -al target
