@@ -97,7 +97,7 @@ impl Parcel {
         };
 
         if let Some(ref mut title) = video.title {
-            let reg = Regex::new(r"[\u0600-\u06FF]").unwarp();
+            let reg = Regex::new(r"[\u0600-\u06FF]").unwrap();
             *title = reg.replace_all(title, "").to_string();
         }
         Ok(video)
