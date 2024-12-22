@@ -94,6 +94,11 @@ impl Parcel {
                 .and_then(OsStr::to_str)
                 .map(|s| s.to_string())
         };
+
+        if let Some(ref mut title) = video.title {
+            let reg = Regex::new(r"[\u0600-\u06FF]").unwarp();
+            *title = reg.replace_all(title, "").to_string();
+        }
         Ok(video)
     }
 }
