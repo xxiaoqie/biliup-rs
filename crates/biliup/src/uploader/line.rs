@@ -99,15 +99,16 @@ impl Parcel {
         if let Some(ref mut title) = video.title {
             let reg = Regex::new(r"[\u0600-\u06FF]").unwrap();
             *title = reg.replace_all(title, "").to_string();
-        }
-        // 限制长度，超出则添加 "..."
-        const MAX_LENGTH: usize = 80;
-        if title.chars().count() > MAX_LENGTH {
-            // 保留 MAX_LENGTH - 3 个字符，并在末尾添加 "..."
-            *title = title
-                .chars()
-                .take(MAX_LENGTH - 3)
-                .collect::<String>() + "...";
+
+            // 限制长度，超出则添加 "..."
+            const MAX_LENGTH: usize = 80;
+            if title.chars().count() > MAX_LENGTH {
+                // 保留 MAX_LENGTH - 3 个字符，并在末尾添加 "..."
+                *title = title
+                    .chars()
+                    .take(MAX_LENGTH - 3)
+                    .collect::<String>() + "...";
+            }
         }
         Ok(video)
     }
