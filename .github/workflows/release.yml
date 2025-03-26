@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
   push:
     #tags:
+    #  - 'build'
     #- 'v[0-9]+.[0-9]+.[0-9]+'
     ## - release
 
@@ -109,7 +110,7 @@ jobs:
         with:
           submodules: false
 
-      - uses: actions/download-artifact@v2
+            #- uses: actions/download-artifact@v2
         # with:
         #   path: dist
       # - run: ls -al ./dist
