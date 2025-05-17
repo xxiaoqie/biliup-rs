@@ -211,9 +211,12 @@ impl Line {
                 response.text().await?
             )));
         }
+
+        let response_json = response.json().await?;
+        info!("ResponseData: {:?}", response_json);        
         match self.os {
             Uploader::Upos => Ok(Parcel {
-                line: Bucket::Upos(response.json().await?),
+                line: Bucket::Upos(response_json),
                 video_file,
             }),
             // Uploader::Kodo => Ok(Parcel {
