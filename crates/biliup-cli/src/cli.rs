@@ -6,12 +6,15 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Cli {
-    /// Turn debugging information on
+    // /// Turn debugging information on
     // #[clap(short, long, parse(from_occurrences))]
     // debug: usize,
-
     #[clap(subcommand)]
     pub command: Commands,
+
+    /// 配置代理
+    #[arg(short, long, default_value = None)]
+    pub proxy: Option<String>,
 
     /// 登录信息文件
     #[arg(short, long, default_value = "cookies.json")]
@@ -36,7 +39,6 @@ pub enum Commands {
 
         // Optional name to operate on
         // name: Option<String>,
-
         /// 需要上传的视频路径,若指定配置文件投稿不需要此参数
         #[arg()]
         video_path: Vec<PathBuf>,
@@ -55,7 +57,6 @@ pub enum Commands {
 
         #[command(flatten)]
         studio: Studio,
-
         // #[arg(required = false, last = true, default_value = "client")]
         // submit: Option<String>,
     },
@@ -147,7 +148,7 @@ pub enum UploadLine {
     Tx,
     Txa,
     Bda,
-    Alia
+    Alia,
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -156,7 +157,6 @@ pub enum SubmitOption {
     App,
     Web,
 }
-
 
 fn human_size(s: &str) -> Result<u64, String> {
     let ret = match s.as_bytes() {

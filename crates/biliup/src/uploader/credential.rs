@@ -6,14 +6,14 @@ use std::path::Path;
 
 use crate::error::{Kind, Result};
 use crate::uploader::bilibili::{BiliBili, ResponseData};
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use cookie::Cookie;
 use md5::{Digest, Md5};
 use reqwest::header::{COOKIE, ORIGIN, REFERER, USER_AGENT};
 
-use rsa::{pkcs8::DecodePublicKey, Pkcs1v15Encrypt, RsaPublicKey};
+use rsa::{Pkcs1v15Encrypt, RsaPublicKey, pkcs8::DecodePublicKey};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::info;
 use url::Url;
@@ -51,8 +51,8 @@ impl AppKeyStore {
     }
 }
 
-pub async fn login_by_cookies(file: impl AsRef<Path>) -> Result<BiliBili> {
-    let client = Credential::new();
+pub async fn login_by_cookies(file: impl AsRef<Path>, proxy: Option<&str>) -> Result<BiliBili> {
+    let client = Credential::new(proxy);
     // let path = file.as_ref();
     let mut file = std::fs::File::options().read(true).write(true).open(file)?;
     let login_info: LoginInfo = serde_json::from_reader(std::io::BufReader::new(&file))?;
@@ -127,13 +127,13 @@ pub struct OAuthInfo {
 pub struct Credential(StatefulClient);
 
 impl Credential {
-    pub fn new() -> Self {
+    pub fn new(proxy: Option<&str>) -> Self {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             "Referer",
             header::HeaderValue::from_static("https://www.bilibili.com/"),
         );
-        Self(StatefulClient::new(headers))
+        Self(StatefulClient::new(headers, proxy))
     }
 
     async fn validate_tokens(&self, login_info: &LoginInfo) -> Result<ResponseData<ResponseValue>> {
@@ -295,7 +295,7 @@ impl Credential {
             .await
     }
 
-    pub async fn send_sms_handle_recaptcha<'a, F, Fut>(
+    pub async fn send_sms_handle_recaptcha<F, Fut>(
         &self,
         phone_number: u64,
         country_code: u32,
@@ -424,7 +424,12 @@ impl Credential {
                 .error_for_status()?;
             let full = raw.bytes().await?;
 
-            let res: ResponseData<ResponseValue> = serde_json::from_slice(&full).map_err(|_| Kind::Custom(format!("error decoding response body, content: {:#?}", String::from_utf8_lossy(&full))))?;
+            let res: ResponseData<ResponseValue> = serde_json::from_slice(&full).map_err(|_| {
+                Kind::Custom(format!(
+                    "error decoding response body, content: {:#?}",
+                    String::from_utf8_lossy(&full)
+                ))
+            })?;
             match res {
                 ResponseData {
                     code: 0,
@@ -583,12 +588,12 @@ impl Credential {
     fn set_cookie(&self, cookie_info: &serde_json::Value) {
         let mut store = self.0.cookie_store.lock().unwrap();
         for cookie in cookie_info["cookies"].as_array().unwrap() {
-            let cookie = Cookie::build(
+            let cookie = Cookie::build((
                 cookie["name"].as_str().unwrap(),
                 cookie["value"].as_str().unwrap(),
-            )
+            ))
             .domain("bilibili.com")
-            .finish();
+            .into();
 
             store
                 .insert_raw(&cookie, &Url::parse("https://bilibili.com/").unwrap())
@@ -609,6 +614,6 @@ impl Credential {
 
 impl Default for Credential {
     fn default() -> Self {
-        Self::new()
+        Self::new(None)
     }
 }

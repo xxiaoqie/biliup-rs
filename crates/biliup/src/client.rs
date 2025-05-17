@@ -1,11 +1,11 @@
-use crate::retry;
+use crate::{ReqwestClientBuilderExt, retry};
 use rand::Rng;
 use reqwest::header::HeaderMap;
-use reqwest::{header, Response};
+use reqwest::{Response, header};
 use reqwest_cookie_store::CookieStoreMutex;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -17,8 +17,8 @@ pub struct StatelessClient {
 }
 
 impl StatelessClient {
-    pub fn new(headers: HeaderMap) -> Self {
-        let client = reqwest::Client::builder()
+    pub fn new(headers: HeaderMap, proxy: Option<&str>) -> Self {
+        let client = reqwest::Client::proxy_builder(proxy)
             .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:60.1) Gecko/20100101 Firefox/60.1")
             .default_headers(headers)
             // .timeout(Duration::new(60, 0))
@@ -64,12 +64,12 @@ pub struct StatefulClient {
 }
 
 impl StatefulClient {
-    pub fn new(headers: HeaderMap) -> Self {
+    pub fn new(headers: HeaderMap, proxy: Option<&str>) -> Self {
         let cookie_store = reqwest_cookie_store::CookieStore::default();
         let cookie_store = CookieStoreMutex::new(cookie_store);
         let cookie_store = Arc::new(cookie_store);
         StatefulClient {
-            client: reqwest::Client::builder()
+            client: reqwest::Client::proxy_builder(proxy)
                 .cookie_provider(std::sync::Arc::clone(&cookie_store))
                 .user_agent(
                     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/63.0.3239.108",
@@ -87,7 +87,7 @@ impl StatefulClient {
 
 impl Default for StatelessClient {
     fn default() -> Self {
-        Self::new(header::HeaderMap::new())
+        Self::new(header::HeaderMap::new(), None)
     }
 }
 

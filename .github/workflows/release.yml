@@ -38,8 +38,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-          #- name: Build Docker image
-          #  run: docker build -t biliup .
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: build
+          args: --release --locked --target ${{ matrix.target }} --bin biliup
 
       - name: Run container
         run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos cargo build --release
@@ -109,7 +113,7 @@ jobs:
         with:
           submodules: false
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         # with:
         #   path: dist
       # - run: ls -al ./dist

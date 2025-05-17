@@ -32,12 +32,13 @@ pub async fn download(
             let resp = client.retryable(media_url.as_str()).await?;
             let bs = resp.bytes().await?;
             // println!("{:?}", bs);
-            if let Ok((_, pl)) = m3u8_rs::parse_media_playlist(&bs) {
-                pl
-            } else {
-                let mut file = File::create("test.fmp4")?;
-                file.write_all(&bs)?;
-                panic!("Unable to parse the content.")
+            match m3u8_rs::parse_media_playlist(&bs) {
+                Ok((_, pl)) => pl,
+                _ => {
+                    let mut file = File::create("test.fmp4")?;
+                    file.write_all(&bs)?;
+                    panic!("Unable to parse the content.")
+                }
             }
         }
         Ok((_i, Playlist::MediaPlaylist(pl))) => {
@@ -71,7 +72,7 @@ pub async fn download(
                     client,
                     &mut ts_file.buf_writer,
                 )
-                    .await?;
+                .await?;
                 splitting.increase_size(length);
                 splitting.increase_time(Duration::from_secs(segment.duration as u64));
                 if splitting.needed() {

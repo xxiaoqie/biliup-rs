@@ -1,5 +1,6 @@
 use crate::error::{Kind, Result};
 use crate::uploader::credential::LoginInfo;
+use crate::ReqwestClientBuilderExt;
 use serde::ser::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -12,124 +13,123 @@ use std::time::Duration;
 use tracing::info;
 use typed_builder::TypedBuilder;
 
-#[derive(clap::Args, Serialize, Deserialize, Debug, TypedBuilder)]
+#[derive(Serialize, Deserialize, Debug, TypedBuilder)]
 #[builder(field_defaults(default))]
+#[cfg_attr(feature = "cli", derive(clap::Args))]
 pub struct Studio {
     /// 是否转载, 1-自制 2-转载
-    #[clap(long, default_value = "1")]
+    #[cfg_attr(feature = "cli", clap(long, default_value = "1"))]
     #[builder(default = 1)]
     pub copyright: u8,
 
     /// 转载来源
-    #[clap(long, default_value_t)]
+    #[cfg_attr(feature = "cli", clap(long, default_value_t))]
     pub source: String,
 
     /// 投稿分区
-    #[clap(long, default_value = "171")]
+    #[cfg_attr(feature = "cli", clap(long, default_value = "171"))]
     #[builder(default = 171)]
     pub tid: u16,
 
     /// 视频封面
-    #[clap(long, default_value_t)]
+    #[cfg_attr(feature = "cli", clap(long, default_value_t))]
     pub cover: String,
 
     /// 视频标题
-    #[clap(long, default_value_t)]
+    #[cfg_attr(feature = "cli", clap(long, default_value_t))]
     #[builder(!default, setter(into))]
     pub title: String,
 
-    #[clap(skip)]
+    #[cfg_attr(feature = "cli", clap(skip))]
     pub desc_format_id: u32,
 
     /// 视频简介
-    #[clap(long, default_value_t)]
+    #[cfg_attr(feature = "cli", clap(long, default_value_t))]
     pub desc: String,
 
     /// 视频简介v2
     #[serde(default)]
     #[builder(!default)]
-    #[clap(skip)]
+    #[cfg_attr(feature = "cli", clap(skip))]
     pub desc_v2: Option<Vec<Credit>>,
 
     /// 空间动态
-    #[clap(long, default_value_t)]
+    #[cfg_attr(feature = "cli", clap(long, default_value_t))]
     pub dynamic: String,
 
-    #[clap(skip)]
+    #[cfg_attr(feature = "cli", clap(skip))]
     #[serde(default)]
     #[builder(default, setter(skip))]
     pub subtitle: Subtitle,
 
     /// 视频标签，逗号分隔多个tag
-    #[clap(long, default_value_t)]
+    #[cfg_attr(feature = "cli", clap(long, default_value_t))]
     pub tag: String,
 
     #[serde(default)]
     #[builder(!default)]
-    #[clap(skip)]
+    #[cfg_attr(feature = "cli", clap(skip))]
     pub videos: Vec<Video>,
 
     /// 延时发布时间，距离提交大于4小时，格式为10位时间戳
-    #[clap(long)]
+    #[cfg_attr(feature = "cli", clap(long))]
     pub dtime: Option<u32>,
 
-    #[clap(skip)]
+    #[cfg_attr(feature = "cli", clap(skip))]
     #[serde(default)]
     pub open_subtitle: bool,
 
-    #[clap(long, default_value = "0")]
+    #[cfg_attr(feature = "cli", clap(long, default_value = "0"))]
     #[serde(default)]
     pub interactive: u8,
 
-    #[clap(long)]
+    #[cfg_attr(feature = "cli", clap(long))]
     #[serde(default)]
     pub mission_id: Option<u32>,
 
     // #[clap(long, default_value = "0")]
     // pub act_reserve_create: u8,
     /// 是否开启杜比音效, 0-关闭 1-开启
-    #[clap(long, default_value = "0")]
+    #[cfg_attr(feature = "cli", clap(long, default_value = "0"))]
     #[serde(default)]
     pub dolby: u8,
 
     /// 是否开启 Hi-Res, 0-关闭 1-开启
-    #[clap(long = "hires", default_value = "0")]
+    #[cfg_attr(feature = "cli", clap(long = "hires", default_value = "0"))]
     #[serde(default)]
     pub lossless_music: u8,
 
     /// 0-允许转载，1-禁止转载
-    #[clap(long, default_value = "0")]
+    #[cfg_attr(feature = "cli", clap(long, default_value = "0"))]
     #[serde(default)]
     pub no_reprint: u8,
 
     /// 是否开启充电, 0-关闭 1-开启
-    #[clap(long, default_value = "0")]
+    #[cfg_attr(feature = "cli", clap(long, default_value = "0"))]
     #[serde(default)]
     pub open_elec: u8,
 
     /// aid 要追加视频的 avid
-    #[clap(skip)]
+    #[cfg_attr(feature = "cli", clap(skip))]
     pub aid: Option<u64>,
 
     /// 是否开启精选评论，仅提交接口为app时可用
-    #[clap(long)]
+    #[cfg_attr(feature = "cli", clap(long))]
     #[serde(default)]
     pub up_selection_reply: bool,
 
     /// 是否关闭评论，仅提交接口为app时可用
-    #[clap(long)]
+    #[cfg_attr(feature = "cli", clap(long))]
     #[serde(default)]
     pub up_close_reply: bool,
 
     /// 是否关闭弹幕，仅提交接口为app时可用
-    #[clap(long)]
+    #[cfg_attr(feature = "cli", clap(long))]
     #[serde(default)]
     pub up_close_danmu: bool,
-    // #[clap(long)]
-    // #[serde(default)]
-    // pub submit_by_app: bool,
+
     /// 自定义提交参数
-    #[clap(long, value_parser = parse_extra_fields)]
+    #[cfg_attr(feature = "cli", clap(long, value_parser = parse_extra_fields))]
     #[serde(flatten)]
     pub extra_fields: Option<HashMap<String, Value>>,
 }
@@ -235,8 +235,8 @@ pub struct BiliBili {
 }
 
 impl BiliBili {
-    pub async fn submit(&self, studio: &Studio) -> Result<ResponseData> {
-        let ret: ResponseData = reqwest::Client::builder()
+    pub async fn submit(&self, studio: &Studio, proxy: Option<&str>) -> Result<ResponseData> {
+        let ret: ResponseData = reqwest::Client::proxy_builder(proxy)
             .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/63.0.3239.108")
             .timeout(Duration::new(60, 0))
             .build()?
@@ -258,7 +258,11 @@ impl BiliBili {
         }
     }
 
-    pub async fn submit_by_app(&self, studio: &Studio) -> Result<ResponseData> {
+    pub async fn submit_by_app(
+        &self,
+        studio: &Studio,
+        proxy: Option<&str>,
+    ) -> Result<ResponseData> {
         let payload = {
             let mut payload = json!({
                 "access_key": self.login_info.token_info.access_token,
@@ -283,7 +287,7 @@ impl BiliBili {
             payload
         };
 
-        let ret: ResponseData = reqwest::Client::builder()
+        let ret: ResponseData = reqwest::Client::proxy_builder(proxy)
             .user_agent("Mozilla/5.0 BiliDroid/7.80.0 (bbcallen@gmail.com) os/android model/MI 6 mobi_app/android build/7800300 channel/bili innerVer/7800310 osVer/13 network/2")
             .timeout(Duration::new(60, 0))
             .build()?
@@ -303,8 +307,8 @@ impl BiliBili {
         }
     }
 
-    pub async fn edit(&self, studio: &Studio) -> Result<serde_json::Value> {
-        let ret: serde_json::Value = reqwest::Client::builder()
+    pub async fn edit(&self, studio: &Studio, proxy: Option<&str>) -> Result<serde_json::Value> {
+        let ret: serde_json::Value = reqwest::Client::proxy_builder(proxy)
             .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/63.0.3239.108")
             .timeout(Duration::new(60, 0))
             .build()?
@@ -327,8 +331,8 @@ impl BiliBili {
     }
 
     /// 查询视频的 json 信息
-    pub async fn video_data(&self, vid: &Vid) -> Result<Value> {
-        let res: ResponseData = reqwest::Client::builder()
+    pub async fn video_data(&self, vid: &Vid, proxy: Option<&str>) -> Result<Value> {
+        let res: ResponseData = reqwest::Client::proxy_builder(proxy)
             .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/63.0.3239.108")
             .timeout(Duration::new(60, 0))
             .build()?
@@ -354,10 +358,19 @@ impl BiliBili {
         }
     }
 
-    pub async fn studio_data(&self, vid: &Vid) -> Result<Studio> {
-        let mut video_info = self.video_data(vid).await?;
+    pub async fn studio_data(&self, vid: &Vid, proxy: Option<&str>) -> Result<Studio> {
+        let mut video_info = self.video_data(vid, proxy).await?;
+        const EXTRA_FIELDS_BLACKLIST: &[&str] = &["limited_free"];
 
-        let mut studio: Studio = serde_json::from_value(video_info["archive"].take())?;
+        let mut archive_value = video_info["archive"].take();
+
+        if let Some(obj) = archive_value.as_object_mut() {
+            for key in EXTRA_FIELDS_BLACKLIST {
+                obj.remove(*key);
+            }
+        }
+
+        let mut studio: Studio = serde_json::from_value(archive_value)?;
         let videos: Vec<Video> = serde_json::from_value(video_info["videos"].take())?;
 
         studio.videos = videos;
@@ -504,13 +517,11 @@ impl BiliBili {
             pages
         };
 
-        let mut all_pages = futures::future::try_join_all(
-            (2..=pages)
-                .map(|page_num| self.archives(status, page_num))
-                .collect::<Vec<_>>(),
-        )
-        .await?;
-        all_pages.insert(0, first_page);
+        let mut all_pages = vec![first_page];
+        for page_num in 2..=pages {
+            let page = self.archives(status, page_num).await?;
+            all_pages.push(page);
+        }
 
         Ok(all_pages)
     }

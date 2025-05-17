@@ -4,7 +4,7 @@ use biliup::error::Kind;
 use biliup::uploader::bilibili::{Credit, ResponseData, Studio};
 use biliup::uploader::credential::login_by_cookies;
 use biliup::uploader::line::Probe;
-use biliup::uploader::{line, VideoFile};
+use biliup::uploader::{VideoFile, line};
 use futures::StreamExt;
 use pyo3::prelude::*;
 use pyo3::pyclass;
@@ -22,9 +22,6 @@ pub enum UploadLine {
     Bda2,
     Ws,
     Qn,
-    // Kodo,
-    // Cos,
-    // CosInternal,
     Bldsa,
     Tx,
     Txa,
@@ -72,7 +69,7 @@ pub struct StudioPre {
     extra_fields: Option<HashMap<String, serde_json::Value>>,
 }
 
-pub async fn upload(studio_pre: StudioPre) -> Result<ResponseData> {
+pub async fn upload(studio_pre: StudioPre, proxy: Option<&str>) -> Result<ResponseData> {
     // let file = std::fs::File::options()
     //     .read(true)
     //     .write(true)
@@ -100,12 +97,12 @@ pub async fn upload(studio_pre: StudioPre) -> Result<ResponseData> {
         ..
     } = studio_pre;
 
-    let bilibili = login_by_cookies(&cookie_file).await;
-    let bilibili = if let Err(Kind::IO(_)) = bilibili {
-        bilibili
-            .with_context(|| String::from("open cookies file: ") + &cookie_file.to_string_lossy())?
-    } else {
-        bilibili?
+    let bilibili = login_by_cookies(&cookie_file, proxy).await;
+    let bilibili = match bilibili {
+        Err(Kind::IO(_)) => bilibili.with_context(|| {
+            String::from("open cookies file: ") + &cookie_file.to_string_lossy()
+        })?,
+        _ => bilibili?,
     };
 
     let client = StatelessClient::default();
@@ -191,10 +188,10 @@ pub async fn upload(studio_pre: StudioPre) -> Result<ResponseData> {
         studio.cover = url;
     }
 
-    Ok(bilibili.submit(&studio).await?)
+    Ok(bilibili.submit(&studio, proxy).await?)
 }
 
-pub async fn upload_by_app(studio_pre: StudioPre) -> Result<ResponseData> {
+pub async fn upload_by_app(studio_pre: StudioPre, proxy: Option<&str>) -> Result<ResponseData> {
     // let file = std::fs::File::options()
     //     .read(true)
     //     .write(true)
@@ -224,12 +221,12 @@ pub async fn upload_by_app(studio_pre: StudioPre) -> Result<ResponseData> {
         extra_fields,
     } = studio_pre;
 
-    let bilibili = login_by_cookies(&cookie_file).await;
-    let bilibili = if let Err(Kind::IO(_)) = bilibili {
-        bilibili
-            .with_context(|| String::from("open cookies file: ") + &cookie_file.to_string_lossy())?
-    } else {
-        bilibili?
+    let bilibili = login_by_cookies(&cookie_file, proxy).await;
+    let bilibili = match bilibili {
+        Err(Kind::IO(_)) => bilibili.with_context(|| {
+            String::from("open cookies file: ") + &cookie_file.to_string_lossy()
+        })?,
+        _ => bilibili?,
     };
 
     let client = StatelessClient::default();
@@ -318,5 +315,5 @@ pub async fn upload_by_app(studio_pre: StudioPre) -> Result<ResponseData> {
         studio.cover = url;
     }
 
-    Ok(bilibili.submit_by_app(&studio).await?)
+    Ok(bilibili.submit_by_app(&studio, proxy).await?)
 }

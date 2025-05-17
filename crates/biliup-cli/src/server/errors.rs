@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::{collections::HashMap, fmt::Debug};
 
 use axum::response::Response;
-use axum::{http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
@@ -39,9 +39,9 @@ pub enum AppError {
     #[error(transparent)]
     AnyhowError(#[from] anyhow::Error),
     #[error(transparent)]
-    DownloadError(#[from] crate::downloader::error::Error),
+    DownloadError(#[from] biliup::downloader::error::Error),
     #[error(transparent)]
-    UploadError(#[from] crate::error::Kind),
+    UploadError(#[from] biliup::error::Kind),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
 }
