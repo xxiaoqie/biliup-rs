@@ -138,6 +138,7 @@ pub async fn append(
     let bilibili = login_by_cookies(user_cookie).await?;
     let mut uploaded_videos = upload(&video_path, &bilibili, line, limit).await?;
     let mut studio = bilibili.studio_data(&vid).await?;
+    studio.extra_fields = None;
     studio.videos.append(&mut uploaded_videos);
     bilibili.edit(&studio).await?;
     // studio.edit(&login_info).await?;
