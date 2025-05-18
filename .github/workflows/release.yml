@@ -21,12 +21,17 @@ jobs:
     strategy:
       fail-fast: false # don't fail other jobs if one fails
       matrix:
-        build: [x86_64-linux] #, x86_64-win-gnu, win32-msvc
+        build: [x86_64-linux, x86_64-windows] #, x86_64-win-gnu, win32-msvc
         include:
         - build: x86_64-linux
-          os: ubuntu-20.04
+          os: ubuntu-latest
           rust: stable
           target: x86_64-unknown-linux-gnu
+          cross: false
+        - build: x86_64-windows
+          os: windows-2019
+          rust: stable
+          target: x86_64-pc-windows-msvc
           cross: false
 
     steps:
@@ -35,8 +40,8 @@ jobs:
         with:
           submodules: true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+            #- name: Set up Docker Buildx
+            #uses: docker/setup-buildx-action@v1
 
       - name: Build release binary
         uses: actions-rs/cargo@v1
@@ -45,11 +50,29 @@ jobs:
           command: build
           args: --release --locked --target ${{ matrix.target }} --bin biliup
 
-      - name: Run container
+      - name: Run container (Linux)
+        if: matrix.os == 'ubuntu-latest'          
         run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos cargo build --release
 
+      - name: Install ${{ matrix.rust }} toolchain (Windows)
+        if: matrix.os == 'windows-2019'
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Build release binary (Windows)
+        if: matrix.os == 'windows-2019'
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: build
+          args: --release --target ${{ matrix.target }} -p biliup
+
       - name: test
-        run: ls -al target
+        run: ls target
 
 #      - name: Install ${{ matrix.rust }} toolchain
 #        uses: actions-rs/toolchain@v1
@@ -113,11 +136,11 @@ jobs:
         with:
           submodules: false
 
-      - uses: actions/download-artifact@v4
+            #- uses: actions/download-artifact@v2
         # with:
         #   path: dist
       # - run: ls -al ./dist
-      - run: ls -al bins-*
+      #- run: ls -al bins-*
 
       - name: Calculate tag name
         run: |

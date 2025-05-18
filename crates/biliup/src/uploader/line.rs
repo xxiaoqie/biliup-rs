@@ -1,3 +1,4 @@
+use regex::Regex;
 use crate::error::Result;
 use crate::uploader::{Uploader, VideoFile, VideoStream};
 use futures::{Stream, TryStreamExt};
@@ -94,6 +95,21 @@ impl Parcel {
                 .and_then(OsStr::to_str)
                 .map(|s| s.to_string())
         };
+
+        if let Some(ref mut title) = video.title {
+            let reg = Regex::new(r"[\u0600-\u06FF]").unwrap();
+            *title = reg.replace_all(title, "").to_string();
+
+            // 限制长度，超出则添加 "..."
+            const MAX_LENGTH: usize = 80;
+            if title.chars().count() > MAX_LENGTH {
+                // 保留 MAX_LENGTH - 3 个字符，并在末尾添加 "..."
+                *title = title
+                    .chars()
+                    .take(MAX_LENGTH - 3)
+                    .collect::<String>() + "...";
+            }
+        }
         Ok(video)
     }
 }
@@ -195,9 +211,12 @@ impl Line {
                 response.text().await?
             )));
         }
+
+        let response_json = response.json().await?;
+        info!("ResponseData: {:?}", response_json);        
         match self.os {
             Uploader::Upos => Ok(Parcel {
-                line: Bucket::Upos(response.json().await?),
+                line: Bucket::Upos(response_json),
                 video_file,
             }),
             // Uploader::Kodo => Ok(Parcel {
