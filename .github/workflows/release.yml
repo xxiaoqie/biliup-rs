@@ -21,12 +21,12 @@ jobs:
     strategy:
       fail-fast: false # don't fail other jobs if one fails
       matrix:
-        build: [x86_64-linux, x86_64-windows] #, x86_64-win-gnu, win32-msvc
+        build: [x86_64-linux-musl, x86_64-windows] #, x86_64-win-gnu, win32-msvc
         include:
-        - build: x86_64-linux
+        - build: x86_64-linux-musl
           os: ubuntu-latest
           rust: stable
-          target: x86_64-unknown-linux-gnu
+          target: x86_64-unknown-linux-musl
           cross: false
         - build: x86_64-windows
           os: windows-2019
@@ -43,16 +43,11 @@ jobs:
             #- name: Set up Docker Buildx
             #uses: docker/setup-buildx-action@v1
 
-      - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.cross }}
-          command: build
-          args: --release --locked --target ${{ matrix.target }} --bin biliup
 
-      - name: Run container (Linux)
+      - name: Using rust musl (Linux)
         if: matrix.os == 'ubuntu-latest'          
-        run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos cargo build --release
+          #run: docker run --rm -v $(pwd):/usr/src/app -w /usr/src/app ${{ secrets.DOCKER_USERNAME }}/rust-centos cargo build --release
+        run: sudo apt-get update && sudo apt-get install -y musl-tools && rustup target add x86_64-unknown-linux-musl && cargo build --release --target x86_64-unknown-linux-musl
 
       - name: Install ${{ matrix.rust }} toolchain (Windows)
         if: matrix.os == 'windows-2019'
@@ -63,16 +58,15 @@ jobs:
           target: ${{ matrix.target }}
           override: true
 
-      - name: Build release binary (Windows)
-        if: matrix.os == 'windows-2019'
+      - name: Build release binary
         uses: actions-rs/cargo@v1
         with:
           use-cross: ${{ matrix.cross }}
           command: build
-          args: --release --target ${{ matrix.target }} -p biliup
+          args: --release --locked --target ${{ matrix.target }} --bin biliup
 
       - name: test
-        run: ls target
+        run: ls target/${{ matrix.target }}/release
 
 #      - name: Install ${{ matrix.rust }} toolchain
 #        uses: actions-rs/toolchain@v1
@@ -118,7 +112,7 @@ jobs:
             cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "dist/"
           else
             #cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
-            cp "target/release/$BIN_NAME" "dist/"
+            cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
           fi
 
       - uses: actions/upload-artifact@v4
