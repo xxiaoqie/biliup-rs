@@ -1,26 +1,22 @@
-# 使用官方 Rust 镜像作为基础镜像
-FROM rust:1.67 as builder
+FROM centos:7
 
-# 设置工作目录
-WORKDIR /app
+#WORKDIR /usr/src/app
+#COPY ./ .
 
-# 将当前目录下的代码复制到容器中
-COPY . .
+RUN cat /etc/yum.repos.d/*
+RUN sed -i 's/^mirrorlist/#mirrorlist/' /etc/yum.repos.d/CentOS-Base.repo \
+    && sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|' /etc/yum.repos.d/CentOS-Base.repo
 
-# 安装依赖并构建项目
-RUN cargo build --release
-
-# 使用官方 Debian 镜像作为运行时镜像
-FROM debian:bullseye-slim
-
-# 安装需要的运行时依赖 (如果有)
-RUN apt-get update && apt-get install -y \
-    libssl-dev \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# 将构建的二进制文件从构建镜像中复制到运行时镜像
-COPY --from=builder /app/target/release/biliup-rs /usr/local/bin/biliup-rs
-
-# 设置容器启动命令
-ENTRYPOINT ["/usr/local/bin/biliup-rs"]
+RUN yum -y groupinstall "Development Tools"
+RUN yum -y install zlib-devel
+RUN curl -sO https://www.python.org/ftp/python/3.8.12/Python-3.8.12.tgz \
+    && tar xzf Python-3.8.12.tgz \
+    && cd Python-3.8.12 \
+    && ./configure --enable-optimizations \
+    && make altinstall \
+    && ln -s /usr/local/bin/python3.8 /usr/bin/python3 \
+    && cd .. \
+    && rm -rf Python-3.8.12.tgz Python-3.8.12
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH=/root/.cargo/bin:$PATH
+#ENV RUSTFLAGS=-C relocation-model=pic
