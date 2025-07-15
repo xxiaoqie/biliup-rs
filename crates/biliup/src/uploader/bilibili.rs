@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 use std::num::ParseIntError;
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::info;
+use tracing::{info, warn};
 use typed_builder::TypedBuilder;
 
 #[derive(Serialize, Deserialize, Debug, TypedBuilder)]
@@ -235,27 +235,10 @@ pub struct BiliBili {
 }
 
 impl BiliBili {
+    #[deprecated(note = "no longer working, fallback to `submit_by_app`")]
     pub async fn submit(&self, studio: &Studio, proxy: Option<&str>) -> Result<ResponseData> {
-        let ret: ResponseData = reqwest::Client::proxy_builder(proxy)
-            .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/63.0.3239.108")
-            .timeout(Duration::new(60, 0))
-            .build()?
-            .post(format!(
-                "http://member.bilibili.com/x/vu/client/add?access_key={}",
-                self.login_info.token_info.access_token
-            ))
-            .json(studio)
-            .send()
-            .await?
-            .json()
-            .await?;
-        info!("{:?}", ret);
-        if ret.code == 0 {
-            info!("投稿成功");
-            Ok(ret)
-        } else {
-            Err(Kind::Custom(format!("{:?}", ret)))
-        }
+        warn!("客户端接口已失效, 将使用APP接口");
+        self.submit_by_app(studio, proxy).await
     }
 
     pub async fn submit_by_app(
@@ -307,14 +290,22 @@ impl BiliBili {
         }
     }
 
+    #[deprecated(note = "no longer working, fallback to `edit_by_web`")]
     pub async fn edit(&self, studio: &Studio, proxy: Option<&str>) -> Result<serde_json::Value> {
-        let ret: serde_json::Value = reqwest::Client::proxy_builder(proxy)
-            .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/63.0.3239.108")
-            .timeout(Duration::new(60, 0))
-            .build()?
+        warn!("客户端接口已失效, 将使用网页接口, 忽略代理{proxy:?}");
+        self.edit_by_web(studio).await
+    }
+
+    pub async fn edit_by_web(&self, studio: &Studio) -> Result<serde_json::Value> {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        let ret: serde_json::Value = self
+            .client
             .post(format!(
-                "http://member.bilibili.com/x/vu/client/edit?access_key={}",
-                self.login_info.token_info.access_token
+                "http://member.bilibili.com/x/vu/web/edit?t={ts}&csrf={}",
+                self.get_csrf()?
             ))
             .json(studio)
             .send()
@@ -411,23 +402,30 @@ impl BiliBili {
         Err(Kind::Custom(result.message))
     }
 
-    pub async fn cover_up(&self, input: &[u8]) -> Result<String> {
+    fn get_csrf(&self) -> Result<&str> {
         let csrf = self
             .login_info
             .cookie_info
             .get("cookies")
             .and_then(|c| c.as_array())
-            .ok_or("cover_up cookie error")?
+            .ok_or("cookie error")?
             .iter()
             .filter_map(|c| c.as_object())
             .find(|c| c["name"] == "bili_jct")
-            .ok_or("cover_up jct error")?;
+            .ok_or("jct error")?
+            .get("value")
+            .and_then(|v| v.as_str())
+            .ok_or("csrf error")?;
+        Ok(csrf)
+    }
+
+    pub async fn cover_up(&self, input: &[u8]) -> Result<String> {
         let response = self
             .client
             .post("https://member.bilibili.com/x/vu/web/cover/up")
             .form(&json!({
                 "cover": format!("data:image/jpeg;base64,{}", base64::Engine::encode(&base64::engine::general_purpose::STANDARD, input)),
-                "csrf": csrf["value"]
+                "csrf": self.get_csrf()?
             }))
             .send()
             .await?;
@@ -498,9 +496,8 @@ impl BiliBili {
         }
     }
 
-    /// 获取所有稿件原始数据
-    async fn all_archives_data(&self, status: &str) -> Result<Vec<Value>> {
-        let mut first_page = self.archives(status, 1).await?;
+    async fn recent_archives_data(&self, status: &str, from_page: u32, max_pages: Option<u32>) -> Result<Vec<Value>> {
+        let mut first_page = self.archives(status, from_page).await?;
 
         let (page_size, count) = {
             let page = first_page["page"].take();
@@ -509,7 +506,7 @@ impl BiliBili {
             (page_size as u32, count as u32)
         };
 
-        let pages = {
+        let total_pages = {
             let mut pages = count / page_size;
             if pages * page_size < count {
                 pages += 1;
@@ -517,8 +514,14 @@ impl BiliBili {
             pages
         };
 
+        let fetch_pages = match max_pages {
+            Some(mp) => std::cmp::min(total_pages - from_page + 1, mp),
+            None => total_pages - from_page + 1,
+        };
+        let to_page = from_page - 1 + fetch_pages;
+
         let mut all_pages = vec![first_page];
-        for page_num in 2..=pages {
+        for page_num in from_page + 1..=to_page {
             let page = self.archives(status, page_num).await?;
             all_pages.push(page);
         }
@@ -527,9 +530,15 @@ impl BiliBili {
     }
 
     /// 获取所有稿件
+    #[deprecated(note = "use `recent_archives` instead")]
     pub async fn all_archives(&self, status: &str) -> Result<Vec<Archive>> {
+        self.recent_archives(status, 1, None).await
+    }
+
+    /// 获取页数范围内的稿件
+    pub async fn recent_archives(&self, status: &str, from_page: u32, max_pages: Option<u32>) -> Result<Vec<Archive>> {
         let studios = self
-            .all_archives_data(status)
+            .recent_archives_data(status, from_page, max_pages)
             .await?
             .iter_mut()
             .map(|page| page["arc_audits"].take())
