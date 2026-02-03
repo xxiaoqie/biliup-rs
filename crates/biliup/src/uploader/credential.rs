@@ -382,7 +382,7 @@ impl Credential {
 
         let urlencoded = serde_urlencoded::to_string(&payload)?;
         let sign = Self::sign(&urlencoded, AppKeyStore::Android.appsec());
-        let urlencoded = format!("{}&sign={}", urlencoded, sign);
+        let urlencoded = format!("{urlencoded}&sign={sign}");
         // let mut form = payload.clone();
         // form["sign"] = Value::from(sign);
         let res: ResponseData<ResponseValue> = self
@@ -431,7 +431,7 @@ impl Credential {
             let raw = self
                 .0
                 .client
-                .post("http://passport.bilibili.com/x/passport-tv-login/qrcode/poll")
+                .post("https://passport.bilibili.com/x/passport-tv-login/qrcode/poll")
                 .form(&form)
                 .send()
                 .await?
@@ -483,7 +483,7 @@ impl Credential {
                 let buvid4 = value["b_4"].as_str().ok_or("cannot find b_4")?.to_owned();
                 Ok((buvid3, buvid4))
             }
-            None => Err(Kind::Custom(format!("cannot find buvid: {:#?}", res))),
+            None => Err(Kind::Custom(format!("cannot find buvid: {res:#?}"))),
         }
     }
 
@@ -499,7 +499,7 @@ impl Credential {
         Ok(self
             .0
             .client
-            .post("http://passport.bilibili.com/x/passport-tv-login/qrcode/auth_code")
+            .post("https://passport.bilibili.com/x/passport-tv-login/qrcode/auth_code")
             .form(&form)
             .send()
             .await?
@@ -542,7 +542,7 @@ impl Credential {
     ) -> Result<LoginInfo> {
         info!("login_by_web_qrcode");
         let qrcode: Value = self.0.client
-            .get("http://passport.bilibili.com/qrcode/getLoginUrl")
+            .get("https://passport.bilibili.com/qrcode/getLoginUrl")
             .header(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0 Iceweasel/38.2.1 BiliApp")
             .send()
             .await?
@@ -560,7 +560,7 @@ impl Credential {
             .send()
             .await?.error_for_status()?;
         self.0.client
-            .post("http://passport.bilibili.com/qrcode/getLoginInfo")
+            .post("https://passport.bilibili.com/qrcode/getLoginInfo")
             .header(USER_AGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0 Iceweasel/38.2.1 BiliApp")
             .form(&[("oauthKey", oauth_key)])
             .send()
@@ -591,7 +591,7 @@ impl Credential {
             "csrf": bili_jct,
             "scanning_type": 3,
         });
-        let cookies = format!("SESSDATA={}; bili_jct={}", sess_data, bili_jct);
+        let cookies = format!("SESSDATA={sess_data}; bili_jct={bili_jct}");
         info!("自动确认二维码");
         let response = self.0.client
             .post("https://passport.bilibili.com/x/passport-tv-login/h5/qrcode/confirm")
@@ -614,7 +614,7 @@ impl Credential {
     pub fn sign(param: &str, app_sec: &str) -> String {
         let mut hasher = Md5::new();
         // process input message
-        hasher.update(format!("{}{}", param, app_sec));
+        hasher.update(format!("{param}{app_sec}"));
         // acquire hash digest in the form of GenericArray,
         // which in this case is equivalent to [u8; 16]
         format!("{:x}", hasher.finalize())

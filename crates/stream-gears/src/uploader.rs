@@ -132,13 +132,18 @@ pub async fn upload(studio_pre: StudioPre, proxy: Option<&str>) -> Result<Respon
         let instant = Instant::now();
 
         let video = uploader
-            .upload(client.clone(), limit, |vs| {
-                vs.map(|vs| {
-                    let chunk = vs?;
-                    let len = chunk.len();
-                    Ok((chunk, len))
-                })
-            })
+            .upload(
+                client.clone(),
+                limit,
+                |vs| {
+                    vs.map(|vs| {
+                        let chunk = vs?;
+                        let len = chunk.len();
+                        Ok((chunk, len))
+                    })
+                },
+                3,
+            )
             .await?;
         let t = instant.elapsed().as_millis();
         info!(
@@ -188,7 +193,7 @@ pub async fn upload(studio_pre: StudioPre, proxy: Option<&str>) -> Result<Respon
         studio.cover = url;
     }
 
-    Ok(bilibili.submit(&studio, proxy).await?)
+    Ok(bilibili.submit_by_app(&studio, proxy).await?)
 }
 
 pub async fn upload_by_app(studio_pre: StudioPre, proxy: Option<&str>) -> Result<ResponseData> {
@@ -256,13 +261,18 @@ pub async fn upload_by_app(studio_pre: StudioPre, proxy: Option<&str>) -> Result
         let instant = Instant::now();
 
         let video = uploader
-            .upload(client.clone(), limit, |vs| {
-                vs.map(|vs| {
-                    let chunk = vs?;
-                    let len = chunk.len();
-                    Ok((chunk, len))
-                })
-            })
+            .upload(
+                client.clone(),
+                limit,
+                |vs| {
+                    vs.map(|vs| {
+                        let chunk = vs?;
+                        let len = chunk.len();
+                        Ok((chunk, len))
+                    })
+                },
+                3,
+            )
             .await?;
         let t = instant.elapsed().as_millis();
         info!(

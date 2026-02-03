@@ -1,9 +1,9 @@
+use crate::ReqwestClientBuilderExt;
 use crate::error::{Kind, Result};
 use crate::uploader::credential::LoginInfo;
-use crate::ReqwestClientBuilderExt;
 use serde::ser::Error;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use std::fmt::{Display, Formatter};
@@ -223,12 +223,13 @@ impl FromStr for Vid {
 impl Display for Vid {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Vid::Aid(aid) => write!(f, "aid={}", aid),
-            Vid::Bvid(bvid) => write!(f, "bvid={}", bvid),
+            Vid::Aid(aid) => write!(f, "aid={aid}"),
+            Vid::Bvid(bvid) => write!(f, "bvid={bvid}"),
         }
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct BiliBili {
     pub client: reqwest::Client,
     pub login_info: LoginInfo,
@@ -286,7 +287,7 @@ impl BiliBili {
             info!("APP接口投稿成功");
             Ok(ret)
         } else {
-            Err(Kind::Custom(format!("{:?}", ret)))
+            Err(Kind::Custom(format!("{ret:?}")))
         }
     }
 
@@ -304,7 +305,7 @@ impl BiliBili {
         let ret: serde_json::Value = self
             .client
             .post(format!(
-                "http://member.bilibili.com/x/vu/web/edit?t={ts}&csrf={}",
+                "https://member.bilibili.com/x/vu/web/edit?t={ts}&csrf={}",
                 self.get_csrf()?
             ))
             .json(studio)
@@ -328,7 +329,7 @@ impl BiliBili {
             .timeout(Duration::new(60, 0))
             .build()?
             .get(format!(
-                "http://member.bilibili.com/x/client/archive/view?access_key={}&{vid}",
+                "https://member.bilibili.com/x/client/archive/view?access_key={}&{vid}",
                 self.login_info.token_info.access_token
             ))
             .send()
@@ -487,7 +488,7 @@ impl BiliBili {
                 code: _,
                 data: None,
                 ..
-            } => Err(Kind::Custom(format!("{:?}", res))),
+            } => Err(Kind::Custom(format!("{res:?}"))),
             ResponseData {
                 code: _,
                 data: Some(v),
@@ -496,7 +497,12 @@ impl BiliBili {
         }
     }
 
-    async fn recent_archives_data(&self, status: &str, from_page: u32, max_pages: Option<u32>) -> Result<Vec<Value>> {
+    async fn recent_archives_data(
+        &self,
+        status: &str,
+        from_page: u32,
+        max_pages: Option<u32>,
+    ) -> Result<Vec<Value>> {
         let mut first_page = self.archives(status, from_page).await?;
 
         let (page_size, count) = {
@@ -536,7 +542,12 @@ impl BiliBili {
     }
 
     /// 获取页数范围内的稿件
-    pub async fn recent_archives(&self, status: &str, from_page: u32, max_pages: Option<u32>) -> Result<Vec<Archive>> {
+    pub async fn recent_archives(
+        &self,
+        status: &str,
+        from_page: u32,
+        max_pages: Option<u32>,
+    ) -> Result<Vec<Archive>> {
         let studios = self
             .recent_archives_data(status, from_page, max_pages)
             .await?
